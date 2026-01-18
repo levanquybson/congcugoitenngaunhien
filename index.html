@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>🎲 Gọi Tên / STT Ngẫu Nhiên + 🎡 Vòng quay may mắn</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+
+<!-- ======== KHỐI 1: GỌI TÊN (giữ nguyên của bạn) ======== -->
+<style>
+  :root{--primary:#0d6efd;--primary-700:#0a58ca;--card:#fff;--ring:#90caf9}
+  *{box-sizing:border-box}
+  body{font-family:'Poppins',system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:40px 20px;text-align:center;background:#fff9c4;}
+  .container{max-width:1200px;margin:0 auto;background:rgba(255,255,255,.7);backdrop-filter:saturate(140%) blur(6px);border-radius:24px;box-shadow:0 12px 30px rgba(16,24,40,.08);padding:28px}
+  h1{margin:0 0 8px;font-size:30px;color:var(--primary-700);letter-spacing:.2px;display:flex;align-items:center;justify-content:center;gap:10px}
+  .sub{color:#666;margin:0 0 20px}
+  .row{display:grid;gap:16px;grid-template-columns:1fr;text-align:left}
+  @media (min-width:880px){.row{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border-radius:18px;padding:18px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  .label{font-weight:600;color:#334;margin-bottom:8px}
+  .hint{color:#667085;font-size:13px}
+  .field,select,input[type="number"],input[type="text"],textarea{width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid #e5e7eb;outline:none;font-size:15px;transition:.2s;background:#fff}
+  .field:focus,select:focus,input[type="number"]:focus,input[type="text"]:focus,textarea:focus{border-color:var(--ring);box-shadow:0 0 0 4px rgba(144,202,249,.25)}
+  .radio-group{display:flex;gap:12px;flex-wrap:wrap}
+  .radio{display:flex;align-items:center;gap:8px;background:#f7f8fb;padding:10px 12px;border-radius:12px;border:1px solid #eef2f7;cursor:pointer}
+  .file{border:2px dashed var(--ring);border-radius:12px;padding:14px;background:#fff}
+  .opt{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  button{border:0;border-radius:30px;padding:12px 22px;font-weight:600;font-size:16px;cursor:pointer;box-shadow:0 8px 18px rgba(13,110,253,.22);transition:transform .15s,filter .15s,opacity .2s;background:var(--primary);color:#fff}
+  button:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+  button:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.07)}
+  .btn-secondary{background:#111827;box-shadow:0 8px 18px rgba(17,24,39,.18)}
+  .btn-ghost{background:#eef2f7;color:#334;box-shadow:none}
+  .result{display:none;margin:26px auto 0;min-height:110px;max-width:780px;padding:24px;background:#fff;border-radius:22px;box-shadow:0 16px 34px rgba(0,0,0,.1);font-weight:700;color:var(--primary-700);text-align:center}
+  .big{font-size:56px;line-height:1.05}
+  .submsg{font-size:20px;color:#444;margin-top:6px}
+  .badge{display:inline-block;padding:6px 10px;font-size:12px;border-radius:999px;background:#eef6ff;color:#1e429f;margin-left:6px}
+  .fade-pop{animation:pop .45s ease forwards}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+  .spin{animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hidden{display:none!important}.mt8{margin-top:8px}
+</style>
+
+<!-- ======== KHỐI 2: VÒNG QUAY — SCOPED CSS, tránh ghi đè body ======== -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto:wght@800&display=swap" rel="stylesheet">
+<style>
+  :root { --wheel-size: 500px; }
+  /* Bọc riêng để không ảnh hưởng toàn trang */
+  #wheelSection {
+    margin: 28px auto 48px;
+    max-width: 980px;
+  }
+  #wheelSection .title {
+    margin: 28px 0 12px; font-size: 40px; color: #e53935; font-family: 'Inter', Arial, sans-serif;
+  }
+  /* đảm bảo container là relative (bạn đã có, chỉ nhắc lại) */
+#wheelSection #wheel-container {
+  position: relative; /* giữ nguyên */
+  width: min(80vmin, var(--wheel-size));
+  height: min(80vmin, var(--wheel-size));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px auto 0;
+}
+
+/* vòng quay nằm dưới arrow */
+#wheelSection #wheel {
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  background: transparent;
+  transition: transform 0.1s ease-out;
+  z-index: 5; /* thấp hơn arrow */
+}
+
+/* arrow: đặt tuyệt đối bên phải, canh giữa theo chiều dọc, xoay sang phải */
+/* đặt tam giác pointer sang bên phải, canh giữa theo chiều dọc */
+#wheelSection .arrow {
+  position: absolute;
+  right: 29px;                /* chỉnh khoảng cách từ rìa vòng quay -> tăng/giảm theo ý bạn */
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg); /* xoay sang phải */
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 30px solid #e53935; /* màu mũi tên */
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.2));
+  z-index: 20;                 /* trên canvas */
+  pointer-events: none;        /* tránh cản click */
+}
+
+ 
+  #wheelSection .button-group {
+    display: flex; gap: 16px; margin-top: 18px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  
+  #wheelSection .button-group button:hover { transform: translateY(-2px); }
+  #wheelSection #wheelSpinBtn { background: #ff7043; }
+  #wheelSection #wheelSpinBtn:hover { background: #ff5f2e; }
+  #wheelSection #wheelEditBtn { background: #42a5f5; }
+  #wheelSection #wheelEditBtn:hover { background: #2196f3; }
+  #wheelSection #wheelResetListBtn { background: #e53935; }
+  #wheelSection #wheelResetListBtn:hover { background: #b71c1c; }
+  #wheelSection #wheelRemoveBtn { background: #8d6e63; }
+  #wheelSection #wheelRemoveBtn:hover { background: #6d4c41; }
+
+  #wheelSection #resultWheel {
+    font-family: "Roboto", "Segoe UI", Arial, sans-serif;
+    margin-top: 26px; font-size: 32px; font-weight: 800; color: #c62828;
+    background: #fff3cd; display: inline-block; padding: 10px 16px;
+    border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.15);
+    min-width: 280px; word-break: break-word;
+  }
+  #wheelSection .modal-overlay {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000; opacity: 0; visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  #wheelSection .modal-overlay.active { opacity: 1; visibility: visible; }
+  #wheelSection .modal-content {
+    background: #fff; padding: 24px; border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    width: 90%; max-width: 500px; transform: translateY(-20px);
+    transition: transform 0.3s ease; position: relative;
+    font-family: 'Inter', Arial, sans-serif;
+  }
+  #wheelSection .modal-overlay.active .modal-content { transform: translateY(0); }
+  #wheelSection .modal-content h2 { margin:0 0 16px; font-size: 24px; color: #333; }
+  #wheelSection .modal-content textarea {
+    width: calc(100% - 20px); height: 200px;
+    margin-bottom: 20px; padding: 10px;
+    border: 1px solid #ccc; border-radius: 8px;
+    font-size: 16px; resize: vertical;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    font-family: 'Inter', Arial, sans-serif;
+  }
+  #wheelSection .modal-actions {
+    display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap;
+  }
+  #wheelSection .modal-actions button {
+    padding: 10px 20px; font-size: 16px; border: none;
+    border-radius: 8px; cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: background-color 0.2s ease;
+  }
+  #wheelSection #wheelSaveListBtn { background: #66bb6a; color: white; }
+  #wheelSection #wheelSaveListBtn:hover { background: #4caf50; }
+  #wheelSection #wheelCancelListBtn { background: #e0e0e0; color: #333; }
+  #wheelSection #wheelCancelListBtn:hover { background: #bdbdbd; }
+
+  @media (max-width: 600px) {
+    #wheelSection .title { font-size: 32px; }
+    #wheelSection #resultWheel { font-size: 24px; min-width: unset; width: 90%; }
+    #wheelSection .button-group { flex-direction: row; gap: 10px; width: 90%; }
+    #wheelSection .button-group button { flex: 1; min-width: 120px; }
+    #wheelSection .modal-content { padding: 16px; }
+    #wheelSection .modal-content h2 { font-size: 20px; }
+    #wheelSection .modal-content textarea { height: 150px; font-size: 14px; }
+    #wheelSection .modal-actions { flex-direction: row; gap: 8px; justify-content: center; }
+    #wheelSection .modal-actions button { flex: 1; min-width: 100px; }
+  }
+#batchSize {
+  width: 80px; /* hoặc 100px tùy bạn */
+}
+#wheelSection .button-group button {
+  padding: 15px 38px;
+  font-size: 18px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  color: #fff;
+  font-weight: 600;
+
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+  box-shadow:
+    0 10px 22px rgba(0,0,0,0.25),
+    0 4px 0 rgba(0,0,0,0.25);
+
+  transition:
+    transform 0.25s cubic-bezier(0.25, 1.25, 0.5, 1),
+    box-shadow 0.25s ease,
+    filter 0.25s ease;
+}
+
+/* Hover: rực nhẹ nhưng vẫn sang */
+#wheelSection .button-group button:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow:
+    0 14px 30px rgba(0,0,0,0.28),
+    0 6px 0 rgba(0,0,0,0.22);
+  filter: brightness(1.15);
+}
+
+/* Nhấn: chìm sâu */
+#wheelSection .button-group button:active {
+  transform: translateY(4px) scale(0.96);
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.25),
+    0 2px 0 rgba(0,0,0,0.22);
+  filter: brightness(0.92);
+}
+
+</style>
+</head>
+
+<body>
+ <h1> ✨CÔNG CỤ GỌI TÊN NGẪU NHIÊN ✨<span class="badge"></span></h1>
+
+  <div class="container">
+       <div class="row">
+      <!-- Cột trái -->
+      <div class="card">
+        <div class="label">Chọn chế độ gọi</div>
+        <div class="radio-group" id="modeGroup">
+          <label class="radio"><input type="radio" name="mode" value="stt"> Gọi theo STT</label>
+          <label class="radio"><input type="radio" name="mode" value="name"> Gọi Tên theo ds lớp</label>
+          <label class="radio"><input type="radio" name="mode" value="manual"> Nhập tay (Textbox)</label>
+        </div>
+
+        <!-- STT -->
+        <div id="sttBlock" class="mt8">
+          <div class="label">STT tối đa</div>
+          <input id="maxStt" type="number" min="1" class="field" placeholder="VD: 50 (mặc định)" />
+        </div>
+
+        <!-- CSV -->
+        <div id="csvBlock" class="hidden mt8">
+          <div class="label">Tải danh sách (.csv / .txt)</div>
+          <div class="file">
+            <input id="fileInput" type="file" accept=".csv,.txt" />
+            <div class="hint">Hỗ trợ: 1 cột (Họ tên) hoặc 2 cột (Họ tên, Lớp). Dấu , ; hoặc tab.</div>
+            <label class="mt8"><input type="checkbox" id="skipHeader"> <span class="hint">Bỏ qua dòng tiêu đề đầu tiên</span></label>
+          </div>
+          <div id="classFilterWrap" class="hidden mt8">
+            <div class="label">Lọc theo lớp</div>
+            <select id="classFilter"></select>
+          </div>
+          <div id="fileStatus" class="hint mt8">Chưa có dữ liệu.</div>
+        </div>
+
+        <!-- MANUAL -->
+        <div id="manualBlock" class="hidden mt8">
+          <div class="label">Danh sách nhập tay</div>
+          <textarea id="manualText" rows="10" class="field" placeholder="Mỗi dòng 1 người. Có thể ghi 'Họ tên, Lớp' nếu muốn.&#10;VD: Nguyễn An, 10A1&#10;Trần Bình, 10A2"></textarea>
+          <div class="hint" id="manualInfo">0 mục • vị trí hiện tại: 0</div>
+        </div>
+
+        <div class="opt">
+          <label><input type="checkbox" id="noRepeat"> Không lặp lại đã gọi</label>
+          <label><input type="checkbox" id="confetti" checked> 🎉 Bắn confetti khi gọi</label>
+          <button id="btnClearHistory" class="btn-ghost">🗑️ Xóa lịch sử gọi</button>
+                <div class="label">Số hs mỗi lần gọi</div>
+        <input id="batchSize" type="number" min="1" class="field" placeholder="VD: 1, 2, 3..." />
+        <input id="closing" type="text" class="field" >
+        <div class="actions" style="margin-top:15px">
+          <button id="btnPick" disabled>🎤 Gọi!</button>
+          <button id="btnReset" class="btn-ghost">↺ Reset</button>
+          <button id="btnSave" class="btn-secondary">💾 Lưu cấu hình</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="result" class="result">
+      <div id="names" class="big"></div>
+      <div id="submsg" class="submsg"></div>
+    </div>
+  </div></div>
+
+  <!-- ======== KHỐI 2: VÒNG QUAY MAY MẮN ======== -->
+  
+ <section id="wheelSection">
+    <h2 class="title">🎡 VÒNG QUAY MAY MẮN🎡</h2>
+     <div class="container">
+       <div class="row">
+
+<div id="wheel-container">
+  <canvas id="wheel" width="500" height="500"></canvas>
+  <div class="arrow"></div> <!-- <-- ĐÃ CHUYỂN VÀO ĐÂY -->
+</div>
+    
+<div class="button-group">
+      <button id="wheelSpinBtn">Quay!</button>
+      <button id="wheelRemoveBtn">Loại tên đã quay</button>
+      <button id="wheelEditBtn">Nhập hoặc sửa danh sách</button>
+      <button id="wheelResetListBtn">Reset danh sách</button>
+    </div>
+    <div id="resultWheel">👉 Kết quả sẽ hiện ở đây</div>
+
+    <!-- Modal chỉnh sửa -->
+    <div id="wheelEditModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2>Sửa danh sách, mỗi tên một dòng</h2>
+        <textarea id="wheelNameListTextarea" placeholder="Nhập mỗi tên trên một dòng"></textarea>
+        <div class="modal-actions">
+          <button id="wheelCancelListBtn">Hủy</button>
+          <button id="wheelSaveListBtn">Lưu danh sách</button>
+        </div>
+      </div>
+    </div> </div>
+
+  </section>
+
+<!-- Confetti CDN cho khối 1 -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+<!-- ======== JS KHỐI 1: GỌI TÊN (giữ nguyên logic nhưng bổ sung & sync) ======== -->
+<script>
+(function(){
+  // ----------- State -----------
+  let mode='stt', maxStt=50, batchSize=1,  skipHeader=false, noRepeat=false, enableConfetti=true;
+  // CSV
+  let people=[], classes=[], filtered=[], hasClassColumn=false;
+  // MANUAL
+  let manualList=[], manualIndex=0;
+  // history
+  let usedStt=new Set(), usedNames=new Set();
+  const STORAGE_KEY='picker_v5_php';
+  const SHARED_KEY='picker_shared_list_v1'; // danh sách share giữa khối 1 & 2
+
+  // expose shared list on window
+  window.sharedList = JSON.parse(localStorage.getItem(SHARED_KEY) || '[]');
+
+  // ----------- DOM -----------
+  const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+  const modeRadios=$$('#modeGroup input[name="mode"]');
+  const sttBlock=$('#sttBlock'), csvBlock=$('#csvBlock'), manualBlock=$('#manualBlock');
+  const inpMaxStt=$('#maxStt'), inpBatch=$('#batchSize'), inpClosing=$('#closing');
+  const fileInput=$('#fileInput'), skipHeaderCb=$('#skipHeader'), classFilterWrap=$('#classFilterWrap'), classFilter=$('#classFilter'), fileStatus=$('#fileStatus');
+  const cbNoRepeat=$('#noRepeat'), cbConfetti=$('#confetti');
+  const btnPick=$('#btnPick'), btnReset=$('#btnReset'), btnSave=$('#btnSave'), btnClearHist=$('#btnClearHistory');
+  const result=$('#result'), namesBox=$('#names'), submsg=$('#submsg');
+  const manualText=$('#manualText'), manualInfo=$('#manualInfo');
+
+  // ----------- Helpers -----------
+  const keyOf=p=>p.class?`${p.name}|${p.class}`:p.name;
+  const API_URL='api/calcgoiten.php';
+
+  function save(){
+    const payload={
+      mode,maxStt,batchSize,closing,skipHeader,noRepeat,enableConfetti,
+      people,hasClassColumn,selectedClass:hasClassColumn?classFilter.value:null,
+      usedStt:[...usedStt],usedNames:[...usedNames],
+      manualText:manualText.value,manualIndex
+    };
+    try{
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(payload));
+      // also persist shared list (names only)
+      const toShared = (people && people.length) ? people.map(p=>p.name) : (manualList && manualList.length?manualList.map(m=>m.name):window.sharedList);
+      localStorage.setItem(SHARED_KEY, JSON.stringify(toShared));
+      window.sharedList = toShared;
+      // notify wheel (if available)
+      if(window.syncWheelFromShared) window.syncWheelFromShared();
+    }catch(e){}
+  }
+  function load(){
+    try{
+      const raw=localStorage.getItem(STORAGE_KEY); if(!raw) return;
+      const d=JSON.parse(raw);
+      mode=d.mode??mode; maxStt=+d.maxStt||maxStt; batchSize=+d.batchSize||batchSize;
+      closing=d.closing||closing; skipHeader=!!d.skipHeader; noRepeat=!!d.noRepeat;
+      enableConfetti = d.enableConfetti!==undefined ? !!d.enableConfetti : true;
+      people=Array.isArray(d.people)?d.people:[]; hasClassColumn=!!d.hasClassColumn;
+      usedStt=new Set(Array.isArray(d.usedStt)?d.usedStt:[]); usedNames=new Set(Array.isArray(d.usedNames)?d.usedNames:[]);
+      manualText.value=d.manualText||''; manualIndex=+d.manualIndex||0;
+      // UI
+      [...modeRadios].forEach(r=>r.checked=(r.value===mode));
+      inpMaxStt.value=maxStt; inpBatch.value=batchSize; inpClosing.value=closing;
+      skipHeaderCb.checked=skipHeader; cbNoRepeat.checked=noRepeat; cbConfetti.checked=enableConfetti;
+      toggleMode();
+      if(people.length){ afterPeopleLoaded(); if(d.selectedClass){ classFilter.value=d.selectedClass; applyClassFilter(); } }
+      parseManual();
+      // load shared list too
+      const fromShared = JSON.parse(localStorage.getItem(SHARED_KEY) || '[]');
+      if(Array.isArray(fromShared) && fromShared.length) { window.sharedList = fromShared; if(window.syncWheelFromShared) window.syncWheelFromShared(); }
+    }catch(e){console.error(e)}
+  }
+
+  function toggleMode(){
+    sttBlock.classList.add('hidden'); csvBlock.classList.add('hidden'); manualBlock.classList.add('hidden');
+    if(mode==='stt') sttBlock.classList.remove('hidden');
+    else if(mode==='name') csvBlock.classList.remove('hidden');
+    else manualBlock.classList.remove('hidden');
+    btnPick.disabled = (mode==='stt'  && availableStt().length===0) ||
+                       (mode==='name' && availableNames().length===0) ||
+                       (mode==='manual'&& availableManual().length===0);
+  }
+
+  function detectSep(line){ if(line.includes('\t')) return '\t'; if(line.includes(';')) return ';'; return ',';}
+  function parseCSV(text){
+    const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); if(!lines.length) return [];
+    const start=skipHeader?1:0;
+    // detect using first non-empty row
+    const sep = detectSep(lines[start] || lines[0] || '');
+    const rows=[];
+    for(let i=start;i<lines.length;i++){
+      // allow both comma and semicolon separation or tab
+      let raw = lines[i].split(sep).map(s=>s.trim());
+      if(raw.length>=2) rows.push({name:raw[0],class:raw[1]});
+      else if(raw.length===1) rows.push({name:raw[0]});
+    }
+    return rows;
+  }
+  function afterPeopleLoaded(){
+    hasClassColumn = people.some(p=>p.class && p.class.length>0);
+    if(hasClassColumn){
+      const set=[...new Set(people.map(p=>p.class).filter(Boolean))].sort();
+      classFilter.innerHTML=`<option value=\"\">-- Tất cả lớp --</option>`+set.map(c=>`<option value=\"${c}\">${c}</option>`).join('');
+      classFilterWrap.classList.remove('hidden');
+    }else classFilterWrap.classList.add('hidden');
+    applyClassFilter();
+    fileStatus.textContent=`Đã nạp ${people.length} dòng${hasClassColumn?` (${classFilter.options.length-1} lớp)`:''}.`;
+    // update shared list and persist
+    const names = people.map(p=>p.name);
+    window.sharedList = names;
+    localStorage.setItem(SHARED_KEY, JSON.stringify(names));
+    if(window.syncWheelFromShared) window.syncWheelFromShared();
+    toggleMode(); save();
+  }
+  function applyClassFilter(){
+    const sel=classFilter.value||''; filtered=sel?people.filter(p=>p.class===sel):[...people];
+    fileStatus.textContent=`${sel?`Lớp ${sel}: `:''}Còn ${availableNames().length} tên khả dụng${noRepeat?' (không lặp)':''}.`;
+    toggleMode(); save();
+  }
+  function availableNames(){ const src=filtered.length?filtered:people; return noRepeat?src.filter(p=>!usedNames.has(keyOf(p))):src; }
+  function availableStt(){ const max = Math.max(1, +inpMaxStt.value || 1); const arr=Array.from({length:max},(_,i)=>i+1); return noRepeat?arr.filter(n=>!usedStt.has(n)):arr; }
+
+  // MANUAL
+  function parseManual(){
+    const lines=manualText.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    manualList=lines.map(line=>{
+      const sep=[',',';','\t'].find(s=>line.includes(s));
+      if(sep){ const [name,cls]=line.split(sep); return {name:name.trim(), class:(cls||'').trim()||undefined}; }
+      return {name:line};
+    });
+    if(manualIndex>manualList.length) manualIndex=manualList.length;
+    updateManualInfo(); toggleMode(); 
+    // update shared list from manual if no CSV
+    if(manualList.length && (!people || !people.length)){
+      const names = manualList.map(m=>m.name);
+      window.sharedList = names;
+      localStorage.setItem(SHARED_KEY, JSON.stringify(names));
+      if(window.syncWheelFromShared) window.syncWheelFromShared();
+    }
+    save();
+  }
+  function availableManual(){ if(!manualList.length) return []; return noRepeat?manualList.slice(manualIndex):manualList; }
+  function updateManualInfo(){ const remain=availableManual().length; manualInfo.textContent=`${manualList.length} mục • vị trí hiện tại: ${manualIndex} • còn: ${remain}`; }
+
+  function showResult(lines){
+    namesBox.innerHTML = lines.map(l=>`<div>${l}</div>`).join('');
+    submsg.textContent = closing || 'Xin mời em lên trả bài!';
+    result.style.display='block';
+    result.classList.remove('fade-pop'); void result.offsetWidth; result.classList.add('fade-pop');
+    if(enableConfetti) fireConfetti();
+  }
+
+  // Confetti burst
+window.fireConfetti = function(){
+  try{
+    const duration=800, end=Date.now()+duration;
+    (function frame(){
+      confetti({particleCount:40, startVelocity:40, spread:55, origin:{x:Math.random()*0.2+0.1, y:0.75}});
+      confetti({particleCount:40, startVelocity:40, spread:55, origin:{x:Math.random()*0.2+0.4, y:0.9}});
+      confetti({particleCount:40, startVelocity:40, spread:55, origin:{x:Math.random()*0.2+0.7, y:0.75}});
+ if(Date.now()<end) requestAnimationFrame(frame);
+    })();
+  }catch(e){ console.warn('confetti error', e); }
+};
+ 
+
+
+
+
+ // nicer roll effect with slightly randomized steps
+  function spinThenPick(poolPreview, finalize, duration=1800){
+    let stepMin=60, stepMax=140;
+    let elapsed=0;
+    btnPick.disabled=true;
+    result.style.display='block'; submsg.innerHTML=`<span class="hint"><span class="spin">🔄</span> Đang quay...</span>`;
+    const iv = setInterval(()=>{
+      const item = poolPreview[Math.floor(Math.random()*poolPreview.length)];
+      namesBox.innerHTML = `<div>${item}</div>`;
+      const step = Math.floor(Math.random()*(stepMax-stepMin))+stepMin;
+      elapsed += step;
+      if(elapsed>=duration){
+        clearInterval(iv);
+        (async ()=>{
+          try{ await finalize(); }
+          catch(e){ console.error(e); }
+          finally{ btnPick.disabled=false; }
+        })();
+      }
+    }, Math.floor((stepMin+stepMax)/2));
+  }
+
+  async function callAPI(payload){
+    try{
+      const res=await fetch(API_URL,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      if(!res.ok) throw new Error('API lỗi '+res.status);
+      return await res.json();
+    }catch(err){ throw err; }
+  }
+
+  // ----------- Events -----------
+  $$('#modeGroup input[name="mode"]').forEach(r=>r.addEventListener('change',()=>{mode=r.value; toggleMode(); save();}));
+  inpMaxStt.addEventListener('input',()=>{maxStt=Math.max(1,+inpMaxStt.value||1); toggleMode(); save();});
+  inpBatch.addEventListener('input',()=>{batchSize=Math.max(1,+inpBatch.value||1); toggleMode(); save();});
+  inpClosing.addEventListener('input',()=>{closing=inpClosing.value.trim()||'Xin mời em lên trả bài!';});
+  cbNoRepeat.addEventListener('change',()=>{noRepeat=cbNoRepeat.checked; updateManualInfo(); applyClassFilter(); toggleMode(); save();});
+  cbConfetti.addEventListener('change',()=>{enableConfetti=cbConfetti.checked; save();});
+  const btnSaveEl = $('#btnSave');
+  btnSaveEl.addEventListener('click',()=>{ save(); btnSaveEl.textContent='✅ Đã lưu'; setTimeout(()=>btnSaveEl.textContent='💾 Lưu cấu hình',1200);});
+  btnClearHist.addEventListener('click',()=>{usedStt.clear(); usedNames.clear(); manualIndex=0; save(); applyClassFilter(); updateManualInfo(); toggleMode(); btnClearHist.textContent='✅ Đã xóa'; setTimeout(()=>btnClearHist.textContent='🗑️ Xóa lịch sử gọi',1100);});
+  btnReset.addEventListener('click',()=>{ if(!confirm('Xóa TẤT CẢ dữ liệu đã lưu và đưa về mặc định?')) return; localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(SHARED_KEY); location.reload(); });
+
+  // CSV
+  skipHeaderCb.addEventListener('change',()=>{skipHeader=skipHeaderCb.checked; save();
+    if(fileInput.files && fileInput.files[0]){ const rd=new FileReader(); rd.onload=e=>{people=parseCSV(e.target.result); afterPeopleLoaded(); save();}; rd.readAsText(fileInput.files[0],'utf-8'); }
+  });
+  fileInput.addEventListener('change',e=>{const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=ev=>{people=parseCSV(ev.target.result); afterPeopleLoaded(); save();}; rd.readAsText(f,'utf-8');});
+  classFilter.addEventListener('change',applyClassFilter);
+
+  // MANUAL
+  manualText.addEventListener('input', parseManual);
+
+  // Nút Gọi!
+  btnPick.addEventListener('click', async ()=>{
+    const payload={
+      mode,
+      maxStt: Math.max(1, +inpMaxStt.value || 1),
+      batchSize: Math.max(1, +inpBatch.value || 1),
+      noRepeat,
+      people: (filtered.length?filtered:people),
+      usedStt:[...usedStt],
+      usedNames:[...usedNames].map(k=>k),
+      manualList,
+      manualIndex
+    };
+
+    const poolPreview = mode==='stt'
+      ? availableStt().map(n=>`#${n}`)
+      : mode==='name'
+        ? availableNames().map(p=>p.class?`${p.name} — ${p.class}`:p.name)
+        : availableManual().map(p=>p.class?`${p.name} — ${p.class}`:p.name);
+
+    if(poolPreview.length===0){
+      showResult([mode==='stt'?'(Hết STT khả dụng)':(mode==='name'?'(Hết tên khả dụng)':'(Hết mục khả dụng)')]);
+      return;
+    }
+
+    spinThenPick(poolPreview, async ()=>{
+      try{
+        const data = await callAPI(payload);
+        if(data && data.status==='ok'){
+          usedStt = new Set(Array.isArray(data.usedStt)?data.usedStt:[]);
+          usedNames = new Set(Array.isArray(data.usedNames)?data.usedNames:[]);
+          manualIndex = +data.manualIndex||manualIndex;
+          updateManualInfo(); applyClassFilter(); toggleMode(); save();
+          const lines = data.mode==='stt'
+            ? data.items.map(n=>`#${n}`)
+            : data.items.map(p=> p.class ? `${p.name} — <span style="font-weight:600">${p.class}</span>` : p.name);
+          showResult(lines);
+          return;
+        }
+      }catch(err){ /* fallback to client */ }
+
+      // LOCAL selection logic (fallback)
+      const selectedLines = [];
+      if(mode==='stt'){
+        let pool = availableStt();
+        for(let i=0;i<batchSize && pool.length;i++){
+          const idx = Math.floor(Math.random()*pool.length);
+          const n = pool.splice(idx,1)[0];
+          selectedLines.push(`#${n}`);
+          if(noRepeat) usedStt.add(n);
+        }
+      } else if(mode==='name'){
+        let pool = availableNames();
+        for(let i=0;i<batchSize && pool.length;i++){
+          const idx = Math.floor(Math.random()*pool.length);
+          const p = pool.splice(idx,1)[0];
+          selectedLines.push(p.class ? `${p.name} — ${p.class}` : p.name);
+          if(noRepeat) usedNames.add(keyOf(p));
+        }
+    } else { // manual ngẫu nhiên
+  let pool = availableManual();
+  for (let i = 0; i < batchSize && pool.length; i++) {
+    let rand = Math.floor(Math.random() * pool.length);
+    const p = pool.splice(rand, 1)[0];
+    selectedLines.push(p.class ? `${p.name} — ${p.class}` : p.name);
+
+    if (noRepeat) {
+      // loại khỏi danh sách gốc
+      manualList = manualList.filter(m => m !== p);
+      manualText.value = manualList
+        .map(m => (m.class ? `${m.name}, ${m.class}` : m.name))
+        .join("\n");
+    }
+  }
+}
+
+
+
+      updateManualInfo(); applyClassFilter(); toggleMode(); save();
+      showResult(selectedLines.length?selectedLines:['(Không có kết quả)']);
+    }, 1800 + Math.random()*900);
+  });
+
+  // Init: đảm bảo DOM sẵn sàng — giữ cấu trúc, chỉ bọc khởi tạo mặc định
+  document.addEventListener('DOMContentLoaded', ()=>{
+    if(modeRadios && modeRadios.length) modeRadios[0].checked=true;
+    if(!inpMaxStt.value) inpMaxStt.value=48;
+    if(!inpBatch.value) inpBatch.value=1;
+    if(!inpClosing.value) inpClosing.value='Xin mời em lên trả bài!';
+    if(cbConfetti) cbConfetti.checked=true;
+    maxStt = Math.max(1, +inpMaxStt.value||1);
+    batchSize = Math.max(1, +inpBatch.value||1);
+    closing = inpClosing.value.trim() || closing;
+    enableConfetti = cbConfetti.checked;
+    toggleMode(); load();
+  });
+
+  // provide a callback wheel script can call when it updates shared list
+  window.onSharedListChanged = function(newList){
+    people = newList.map(n=>({name:n}));
+    filtered = [...people];
+    localStorage.setItem(SHARED_KEY, JSON.stringify(newList));
+    window.sharedList = newList;
+    fileStatus.textContent = `Đã nạp ${people.length} tên (được cập nhật từ vòng quay)`;
+    applyClassFilter();
+    save();
+  };
+
+})();
+
+</script>
+
+<!-- ======== JS KHỐI 2: VÒNG QUAY (đã đổi ID, gộp init, sửa canvas & remove duplicate fn) ======== -->
+<script>
+
+(function(){
+  const WHEEL_LOCAL_KEY = "Wheel_Vong_quay_may_man_v2";
+  const SHARED_KEY = "picker_shared_list_v1";
+  const defaultNames = ["Nguyễn", "Nhật", "Huy", "Quốc", "Học", "Huế"];
+
+  let wheelNames = [];
+
+  // Tham chiếu DOM
+  const wheelCanvas = document.getElementById("wheel");
+  const wheelCtx = wheelCanvas.getContext("2d");
+  const wheelSpinBtn = document.getElementById("wheelSpinBtn");
+  const wheelEditBtn = document.getElementById("wheelEditBtn");
+  const wheelResetListBtn = document.getElementById("wheelResetListBtn");
+  const wheelRemoveBtn = document.getElementById("wheelRemoveBtn");
+  const wheelNameListTextarea = document.getElementById("wheelNameListTextarea");
+  const wheelSaveListBtn = document.getElementById("wheelSaveListBtn");
+  const wheelCancelListBtn = document.getElementById("wheelCancelListBtn");
+  const wheelEditModal = document.getElementById("wheelEditModal");
+  const wheelResultDisplay = document.getElementById("resultWheel");
+
+  // Vòng quay vars
+  let W, H, R, N=0, ARC=0, wheelAngle=0, spinning=false;
+  const baseColors = ["#ffcc33","#ff9933","#66bb6a","#42a5f5","#ab47bc","#ef5350"];
+  let colors=[];
+  let winnerName = "";
+
+  function loadNamesFromLocalStorage(){
+    try{
+      const shared = JSON.parse(localStorage.getItem(SHARED_KEY) || '[]');
+      if(Array.isArray(shared) && shared.length) return shared.slice();
+    }catch(e){}
+    try{
+      const stored = localStorage.getItem(WHEEL_LOCAL_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    }catch(e){}
+    return defaultNames.slice();
+  }
+
+  function saveNamesToLocalStorage(n){ try{ localStorage.setItem(WHEEL_LOCAL_KEY, JSON.stringify(n)); }catch(e){} }
+
+  function resizeCanvasToDisplaySize(){
+    const dpr = window.devicePixelRatio || 1;
+    const rect = wheelCanvas.getBoundingClientRect();
+    const cssSize = Math.max(80, rect.width || parseFloat(getComputedStyle(wheelCanvas).width) || 500);
+    wheelCanvas.style.width = cssSize + 'px';
+    wheelCanvas.style.height = cssSize + 'px';
+    wheelCanvas.width = Math.floor(cssSize * dpr);
+    wheelCanvas.height = Math.floor(cssSize * dpr);
+    // scale context so we can draw in CSS pixels
+    wheelCtx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function updateWheelParameters(){
+    resizeCanvasToDisplaySize();
+    W = wheelCanvas.clientWidth || 500; H = W; R = W/2;
+    N = wheelNames.length;
+    ARC = N ? 2 * Math.PI / N : 0;
+    colors = [];
+    for (let i = 0; i < N; i++) colors.push(baseColors[i % baseColors.length]);
+    if (N % 6 === 1 && colors.length) colors[colors.length - 1] = baseColors[3];
+  }
+
+  function drawWheel(){
+    // clear using CSS units (context is scaled to CSS px)
+    wheelCtx.clearRect(0,0,W,H);
+    if(N===0) return;
+    for(let i=0;i<N;i++){
+      const start = wheelAngle + i * ARC;
+      const end = start + ARC;
+      wheelCtx.beginPath();
+      wheelCtx.moveTo(R, R);
+      wheelCtx.fillStyle = colors[i];
+      wheelCtx.arc(R, R, R, start, end);
+      wheelCtx.closePath();
+      wheelCtx.fill();
+
+      // text
+      wheelCtx.save();
+      wheelCtx.translate(R, R);
+      wheelCtx.rotate(start + ARC / 2);
+      wheelCtx.textAlign = "right";
+      wheelCtx.fillStyle = "#212121";
+      // font size relative to wheel size
+      const fontSize = Math.max(12, Math.floor(W / 28));
+      wheelCtx.font = fontSize + "px Arial";
+      const name = wheelNames[i].length>28 ? wheelNames[i].slice(0,25)+'...' : wheelNames[i];
+      wheelCtx.fillText(name, R - 12, 6);
+      wheelCtx.restore();
+    }
+  }
+
+  function easeOutCubic(t){return 1-Math.pow(1-t,3);}
+
+  function spin(){
+    if (spinning) return;
+    if (N === 0) { wheelResultDisplay.textContent = "Danh sách rỗng! Không thể quay."; return; }
+    spinning = true; wheelResultDisplay.textContent = "Đang quay..."; winnerName = "";
+    const startAngle = wheelAngle;
+    const extraTurns = 4 + Math.random() * 2;
+    const delta = extraTurns * 2 * Math.PI + Math.random() * 2 * Math.PI;
+    const D = 4200; const t0 = performance.now();
+    function frame(t){
+      const p=Math.min((t-t0)/D,1);
+      wheelAngle=startAngle+delta*easeOutCubic(p);
+      drawWheel();
+      if(p<1) requestAnimationFrame(frame);
+      else{ spinning=false; announceWinner(); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+function announceWinner() {
+  if (N === 0 || ARC === 0) return;
+
+  const POINTER_OFFSET = 0;  // ← mình sẽ thay số này cho bạn
+
+  let theta = (-wheelAngle + POINTER_OFFSET) % (2 * Math.PI);
+  if (theta < 0) theta += 2 * Math.PI;
+
+  let idx = Math.floor(theta / ARC);
+  idx = ((idx % N) + N) % N;
+
+  winnerName = wheelNames[idx];
+  wheelResultDisplay.textContent = `🎉 ${winnerName} 🎉`;
+  fireConfetti();
+}
+
+  function showEditModal(){ wheelNameListTextarea.value = wheelNames.join("\n"); wheelEditModal.classList.add("active"); }
+  function hideEditModal(){ wheelEditModal.classList.remove("active"); }
+
+  // Expose sync for Khối 1
+  window.syncWheelFromShared = function(){
+    try{
+      const shared = JSON.parse(localStorage.getItem(SHARED_KEY) || '[]');
+      if(Array.isArray(shared) && shared.length){
+        wheelNames = shared.slice();
+        saveNamesToLocalStorage(wheelNames);
+        updateWheelParameters(); drawWheel();
+        wheelResultDisplay.textContent = "Danh sách đồng bộ từ Khối 1";
+        return;
+      }
+    }catch(e){}
+    updateWheelParameters(); drawWheel();
+  };
+
+  function saveNameList(){
+    const newNames = wheelNameListTextarea.value.split("\n").map(n=>n.trim()).filter(n=>n!="");
+    if(newNames.length===0){ wheelResultDisplay.textContent = "Danh sách không được để trống!"; return; }
+    wheelNames = newNames;
+    saveNamesToLocalStorage(wheelNames);
+    try{ localStorage.setItem(SHARED_KEY, JSON.stringify(wheelNames)); }catch(e){}
+    if(window.onSharedListChanged) window.onSharedListChanged(wheelNames.slice());
+    updateWheelParameters(); drawWheel();
+    wheelResultDisplay.textContent = "Danh sách đã được cập nhật!";
+    hideEditModal();
+  }
+
+  function resetNameList(){
+    try{ localStorage.removeItem(WHEEL_LOCAL_KEY); localStorage.removeItem(SHARED_KEY); }catch(e){}
+    wheelNames = defaultNames.slice();
+    updateWheelParameters(); drawWheel();
+    wheelResultDisplay.textContent = "Danh sách đã reset về mặc định!";
+    hideEditModal();
+    if(window.onSharedListChanged) window.onSharedListChanged(wheelNames.slice());
+  }
+
+  function removeWinner(){
+    if(!winnerName){ wheelResultDisplay.textContent = "Chưa có người thắng để loại bỏ."; return; }
+    const idx = wheelNames.indexOf(winnerName);
+    if(idx>-1){ wheelNames.splice(idx,1); saveNamesToLocalStorage(wheelNames); try{ localStorage.setItem(SHARED_KEY, JSON.stringify(wheelNames)); }catch(e){} updateWheelParameters(); drawWheel(); wheelResultDisplay.textContent = `Đã loại "${winnerName}" khỏi danh sách!`; if(window.onSharedListChanged) window.onSharedListChanged(wheelNames.slice()); winnerName = ""; }
+    else wheelResultDisplay.textContent = "Không tìm thấy tên để loại bỏ.";
+  }
+
+  // Events
+  wheelSpinBtn.addEventListener('click', spin);
+  wheelEditBtn.addEventListener('click', showEditModal);
+  wheelResetListBtn.addEventListener('click', resetNameList);
+  wheelRemoveBtn.addEventListener('click', removeWinner);
+  wheelSaveListBtn.addEventListener('click', saveNameList);
+  wheelCancelListBtn.addEventListener('click', hideEditModal);
+
+  window.addEventListener('resize', ()=>{ updateWheelParameters(); drawWheel(); });
+
+  // Init
+  document.addEventListener('DOMContentLoaded', ()=>{
+    wheelNames = loadNamesFromLocalStorage();
+    updateWheelParameters(); drawWheel();
+    wheelResultDisplay.textContent = "🎉Kết quả lần quay xe!🎉";
+  });
+
+})();
+
+
+
+</script>
+
+</body>
+</html>
